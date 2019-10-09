@@ -122,8 +122,8 @@ func Startup() {
 	api.POST("/sysupgrade", sysupgradeHandler)
 	api.POST("/upgrade", upgradeHandler)
 
-	api.POST("/releaseDhcp/:device", releaseDhcp)
-	api.POST("/renewDhcp/:device", renewDhcp)
+	api.POST("/releasedhcp/:device", releaseDhcp)
+	api.POST("/renewdhcp/:device", renewDhcp)
 	// files
 	engine.Static("/admin", "/www/admin")
 	engine.Static("/settings", "/www/settings")
