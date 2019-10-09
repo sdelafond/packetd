@@ -714,7 +714,7 @@ func releaseDhcp(c *gin.Context) {
 		logger.Warn("Unable to get udhcpc pid: %v - Trying dhclient \n", err)
 		err = exec.Command("dhclient", "-r", deviceName).Run()
 		if err != nil {
-			logger.Warn("Release DHCP failed: %s\n", err.Error())
+			logger.Warn("Release DHCP with dhclient has failed: %s\n", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -722,7 +722,7 @@ func releaseDhcp(c *gin.Context) {
 		// if we have the PID and no error then try to kill the SIGUSR2 PID (releases IP)
 		err := exec.Command("kill", "-SIGUSR2", string(udhcpcPid)).Run()
 		if err != nil {
-			logger.Warn("Release DHCP failed: %s\n", err.Error())
+			logger.Warn("Release DHCP by killing sigusr2 has failed: %s\n", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -744,7 +744,7 @@ func renewDhcp(c *gin.Context) {
 		logger.Warn("Unable to get udhcpc pid: %v - Trying dhclient \n", err)
 		err = exec.Command("dhclient", "$wan").Run()
 		if err != nil {
-			logger.Warn("Renew DHCP failed: %s\n", err.Error())
+			logger.Warn("Renew DHCP with dhclient has failed: %s\n", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -752,7 +752,7 @@ func renewDhcp(c *gin.Context) {
 		// if we have the PID and no error then try to kill the SIGUSR1 PID (renews IP)
 		err := exec.Command("kill", "-SIGUSR1", string(udhcpcPid)).Run()
 		if err != nil {
-			logger.Warn("Renew DHCP failed: %s\n", err.Error())
+			logger.Warn("Renew DHCP by killing PID sigusr1 has failed: %s\n", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
