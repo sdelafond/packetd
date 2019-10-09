@@ -122,6 +122,8 @@ func Startup() {
 	api.POST("/sysupgrade", sysupgradeHandler)
 	api.POST("/upgrade", upgradeHandler)
 
+	api.POST("/releaseDhcp/:device", releaseDhcp)
+	api.POST("/renewDhcp/:device", renewDhcp)
 	// files
 	engine.Static("/admin", "/www/admin")
 	engine.Static("/settings", "/www/settings")
@@ -695,6 +697,66 @@ func upgradeHandler(c *gin.Context) {
 		return
 	}
 	logger.Info("Launching upgrade... done\n")
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+	return
+}
+
+func releaseDhcp(c *gin.Context) {
+	deviceName := c.Param("device")
+
+	logger.Info("Releasing DHCP for device %s...\n", deviceName)
+
+	// var/run/udhcpc-deviceName stores the PID of the DHCP client process with udhcpc on openwrt
+	udhcpcPid, err := exec.Command("/bin/cat", fmt.Sprintf("/var/run/udhcpc-%s", deviceName)).CombinedOutput()
+	if err != nil {
+		// if we cannot find the udhcpc, then this probably isn't an openwrt device
+		logger.Warn("Unable to get udhcpc pid: %v - Trying dhclient \n", err)
+		err = exec.Command("dhclient", "-r", deviceName).Run()
+		if err != nil {
+			logger.Warn("Release DHCP failed: %s\n", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		// if we have the PID and no error then try to kill the SIGUSR2 PID (releases IP)
+		err := exec.Command("kill", "-SIGUSR2", string(udhcpcPid)).Run()
+		if err != nil {
+			logger.Warn("Release DHCP failed: %s\n", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+	return
+}
+
+func renewDhcp(c *gin.Context) {
+	deviceName := c.Param("device")
+
+	logger.Info("Renewing DHCP for device %s...\n", deviceName)
+
+	// var/run/udhcpc-deviceName stores the PID of the DHCP client process with udhcpc on openwrt
+	udhcpcPid, err := exec.Command("/bin/cat", fmt.Sprintf("/var/run/udhcpc-%s", deviceName)).CombinedOutput()
+	if err != nil {
+		// if we cannot find the udhcpc, then this probably isn't an openwrt device
+		logger.Warn("Unable to get udhcpc pid: %v - Trying dhclient \n", err)
+		err = exec.Command("dhclient", "$wan").Run()
+		if err != nil {
+			logger.Warn("Renew DHCP failed: %s\n", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		// if we have the PID and no error then try to kill the SIGUSR1 PID (renews IP)
+		err := exec.Command("kill", "-SIGUSR1", string(udhcpcPid)).Run()
+		if err != nil {
+			logger.Warn("Renew DHCP failed: %s\n", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true})
 	return
